@@ -30,7 +30,7 @@ async function getArchiveList() {
   archives.sort((a, b) => b.updateTime - a.updateTime).forEach(it => {
     const archiveItem = document.createElement('option')
     const name = it.basename.substr(8, it.basename.length - 12)
-    archiveItem.appendChild(document.createTextNode(name))
+    archiveItem.appendChild(document.createTextNode(decodeURIComponent(name)))
     archiveItem.setAttribute('value', it.filename)
     UIHandler.archiveSelect.appendChild(archiveItem)
   })
@@ -61,14 +61,28 @@ async function initClient(config) {
   }
 }
 
+async function backupArchive(fileName) {
+  if (!fileName) {
+    return
+  }
+  const backupFileName = `/history/archive_backup_${new Date().getTime()}_${fileName.substr(9)}`
+  try {
+    await client.moveFile(fileName, backupFileName)
+  } catch(e) {
+    alert('备份存档失败：' + e.message)
+  }
+}
+
 function saveArchive() {
   const selected = UIHandler.archiveSelect.selectedOptions[0]
+  let oldFileName = selected.value
   let fileName = selected.value
   if (!selected.value) {
     let inputName = prompt('请输入存档名称（未输入默认为default）：')
     if (!inputName) {
       inputName = 'default'
     }
+    inputName = encodeURIComponent(inputName)
     fileName = `/archive_${inputName}.txt`
   }
   console.log('【云存档】导出存档...')
@@ -82,11 +96,13 @@ function saveArchive() {
       clearInterval(timer)
       if (!!data) {
         console.log('【云存档】上传存档...')
-        client.putFileContents(fileName, data).then(() => {
-          alert('存档成功！')
-          getArchiveList().then()
-        }).catch(e => {
-          alert('存档失败：' + e.message)
+        backupArchive(oldFileName).then(() => {
+          client.putFileContents(fileName, data).then(() => {
+            alert('存档成功！')
+            getArchiveList().then()
+          }).catch(e => {
+            alert('存档失败：' + e.message)
+          })
         })
       }
     }
@@ -113,11 +129,9 @@ function deleteArchive() {
     return
   }
   if (confirm(`确定删除存档${selected.innerHTML}？`)) {
-    client.deleteFile(selected.value).then(() => {
+    backupArchive(selected.value).then(() => {
       alert('删除存档成功！')
       getArchiveList().then()
-    }).catch(e => {
-      alert('删除存档失败：' + e.message)
     })
   }
 }
