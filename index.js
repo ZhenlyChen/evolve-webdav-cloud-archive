@@ -23,6 +23,8 @@ async function getArchiveList() {
   archives.forEach(it => it.updateTime = new Date(it.lastmod).getTime())
   UIHandler.archiveSelect.innerHTML = ''
   UIHandler.archiveSelect.appendChild(UIHandler.newArchiveItem)
+  UIHandler.archiveSelect.disabled = false
+  UIHandler.newBtn.disabled = false
   if (archives.length === 0) {
     UIHandler.archiveSelect.selectedIndex = 0
     return
@@ -149,12 +151,15 @@ async function initConfig() {
   const config = {
     url, username, password
   }
+  if (!confirm('确认以下配置：\n' + JSON.stringify(config))) {
+    return
+  }
   let error = ''
   if (error = await initClient(config)) {
+    alert('无效的配置: ' + error)
+  } else {
     localStorage.setItem('cloudArchiveConfig', JSON.stringify(config))
     alert('配置成功~')
-  } else {
-    alert('无效的配置: ' + error)
   }
 }
 
@@ -176,6 +181,7 @@ function initUI(config) {
 
   // 存档列表
   const archiveSelect = document.createElement('select')
+  archiveSelect.disabled = !config.url
   archiveSelect.name = 'archiveSelect'
   archiveSelect.className = 'button is-primary'
   archiveSelect.style = 'height: 1.5rem;padding: 0 .75rem;margin: 0.5rem;font-size: 14px;width:160px;'
@@ -199,6 +205,7 @@ function initUI(config) {
   // 新建存档
   const newBtn = document.createElement('button')
   newBtn.className = 'button'
+  newBtn.disabled  = !config.url
   newBtn.appendChild(document.createTextNode('上传'))
   newBtn.onclick = saveArchive
   divLayout.appendChild(newBtn)
@@ -248,6 +255,7 @@ function initUI(config) {
             window.client = client
           } else {
             console.error('【云存档】初始化配置失败', e)
+            alert('初始化云存档失败：', e)
           }
         })
       }
